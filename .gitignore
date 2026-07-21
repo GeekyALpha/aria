@@ -53,3 +53,6 @@ continue.json
 .aider*
 .windsurfrules
 .codeium
+
+# internal design notes (kept local, not published)
+idea.md

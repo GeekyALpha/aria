@@ -98,7 +98,3 @@ The app deploys to Vercel as a standard Next.js project. Add the same environmen
 ## Scope notes
 
 Per the build brief, the following are intentionally mocked / roadmap (not part of this demo): real Xero/MYOB OAuth ingest, real email/SMS/WhatsApp delivery, and multi-tenant auth. The typed adapters are designed so each is an afternoon against the existing interfaces.
-
----
-
-*Design notes and architecture rationale: [`idea.md`](./idea.md).*
