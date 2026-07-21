@@ -1,65 +1,108 @@
-import Image from "next/image";
+import { Database, Receipt } from "lucide-react";
+import { AppShell } from "@/components/shell/app-shell";
+import { HeroCounter } from "@/components/dashboard/hero-counter";
+import { MetricsGrid } from "@/components/dashboard/metrics-grid";
+import { InvoiceCard } from "@/components/dashboard/invoice-card";
+import { AutoRefresh } from "@/components/dashboard/auto-refresh";
+import { getMetrics, listInvoices } from "@/lib/db";
+import { ensureSeed } from "@/seed/debtors";
+import type { Invoice, InvoiceStatus } from "@/lib/types";
 
-export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+export const dynamic = "force-dynamic";
+
+const STATUS_ORDER: Record<InvoiceStatus, number> = {
+  overdue: 0,
+  negotiating: 1,
+  in_plan: 2,
+  disputed: 3,
+  uncollectable: 4,
+  paid: 5,
+};
+
+export default async function Page() {
+  let invoices: Invoice[] = [];
+  let recoveredCents = 0;
+  let outstandingCents = 0;
+  let overdueCount = 0;
+  let paidCount = 0;
+  let hoursSaved = 0;
+  let dbReady = true;
+  let reason = "";
+
+  try {
+    let metrics = await getMetrics();
+    invoices = await listInvoices();
+
+    if (invoices.length === 0) {
+      await ensureSeed();
+      invoices = await listInvoices();
+      metrics = await getMetrics();
+    }
+
+    recoveredCents = metrics.recovered_cents ?? 0;
+    outstandingCents = metrics.outstanding_cents ?? 0;
+    overdueCount = metrics.overdue_count ?? 0;
+    paidCount = metrics.paid_count ?? 0;
+    hoursSaved = Number(metrics.hours_saved ?? 0);
+  } catch (e) {
+    dbReady = false;
+    reason = (e as Error).message;
+  }
+
+  if (!dbReady) {
+    return (
+      <AppShell>
+        <div className="glass mt-10 rounded-2xl p-10 text-center">
+          <Database className="mx-auto h-8 w-8 text-amber-300" />
+          <h2 className="mt-4 text-lg font-semibold">Supabase not connected yet</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+            Provision the database (Supabase MCP) and set <code className="rounded bg-white/10 px-1">SUPABASE_URL</code> +{" "}
+            <code className="rounded bg-white/10 px-1">SUPABASE_SERVICE_ROLE_KEY</code> in{" "}
+            <code className="rounded bg-white/10 px-1">.env.local</code>, then refresh.
           </p>
+          <p className="mx-auto mt-3 max-w-md text-xs text-muted-foreground/70">{reason}</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </AppShell>
+    );
+  }
+
+  const sorted = [...invoices].sort(
+    (a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9),
+  );
+
+  return (
+    <AppShell>
+      <AutoRefresh />
+
+      <HeroCounter
+        recoveredCents={recoveredCents}
+        invoiceCount={invoices.length}
+        hoursSaved={hoursSaved}
+      />
+
+      <MetricsGrid
+        overdueCount={overdueCount}
+        outstandingCents={outstandingCents}
+        recoveredCents={recoveredCents}
+        hoursSaved={hoursSaved}
+      />
+
+      <div className="mt-8 flex items-center justify-between">
+        <h2 className="flex items-center gap-2 text-sm font-medium uppercase tracking-[0.16em] text-muted-foreground">
+          <Receipt className="h-4 w-4" />
+          Work queue
+          <span className="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-muted-foreground">
+            {invoices.length}
+          </span>
+        </h2>
+        <span className="text-xs text-muted-foreground">{paidCount} collected</span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {sorted.map((inv, i) => (
+          <InvoiceCard key={inv.id} invoice={inv} index={i} />
+        ))}
+      </div>
+    </AppShell>
   );
 }
