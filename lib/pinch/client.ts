@@ -160,6 +160,10 @@ export function realtimePayment(input: PinchRealtimeInput): Promise<PinchRealtim
   return req<PinchRealtimePayment>("/payments/realtime", { method: "POST", body: input });
 }
 
+export function getPayment(id: string): Promise<PinchRealtimePayment> {
+  return req<PinchRealtimePayment>(`/payments/${id}`);
+}
+
 // ── Fees oracle ────────────────────────────────────────────
 export function calculateFees(input: PinchFeeCalcInput): Promise<PinchFeeCalcResult> {
   return req<PinchFeeCalcResult>("/fees/calculate", { method: "POST", body: input });
