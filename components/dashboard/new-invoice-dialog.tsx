@@ -65,7 +65,7 @@ export function NewInvoiceDialog() {
           <Plus className="h-4 w-4" /> New invoice
         </Button>
       </DialogTrigger>
-      <DialogContent className="glass-strong border-white/10 bg-[#0f1623]/95">
+      <DialogContent className="border-white/10 bg-[#0f1623] shadow-2xl ring-1 ring-black/40">
         <DialogHeader>
           <DialogTitle>Paste an overdue invoice</DialogTitle>
           <DialogDescription>
