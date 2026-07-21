@@ -39,3 +39,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# AI / agent tooling configs (kept local, never committed)
+AGENTS.md
+CLAUDE.md
+opencode.json
+.opencode/
+.cursorrules
+.cursor/
+.mcp.json
+continue.json
+.continue/
+.aider*
+.windsurfrules
+.codeium
