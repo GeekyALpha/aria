@@ -62,10 +62,24 @@ export const DEMO_INVOICES = [
 ] as const;
 
 export async function ensureSeed(): Promise<Invoice[]> {
+  const ids = DEMO_INVOICES.map((d) => d.id);
+
+  // Wipe prior demo state so each /api/seed gives a pristine recording slate.
+  await supabase.from("conversations").delete().in("invoice_id", ids);
+  await supabase.from("actions").delete().in("invoice_id", ids);
+
   const rows = DEMO_INVOICES.map((d) => ({
     ...d,
     status: "overdue" as const,
     debtor_history: { ...d.debtor_history },
+    // reset all collection state from any previous run
+    payer_id: null,
+    plan_id: null,
+    subscription_id: null,
+    payment_link_id: null,
+    pinch_payment_id: null,
+    recovered_cents: 0,
+    hours_saved: 0,
   }));
 
   const { data, error } = await supabase
