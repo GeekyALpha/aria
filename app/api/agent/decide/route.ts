@@ -2,10 +2,19 @@ import { decideAction } from "@/lib/agent/openai";
 import { addMessage, getInvoice, listConversations, recordAction, updateInvoice } from "@/lib/db";
 import type { DecideInput } from "@/lib/agent/prompt";
 import { daysSince } from "@/lib/utils";
+import { ipFromRequest, rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   const { invoice_id } = (await req.json().catch(() => ({}))) as { invoice_id?: string };
   if (!invoice_id) return Response.json({ error: "invoice_id required" }, { status: 400 });
+
+  const rl = rateLimit({ key: `decide:${ipFromRequest(req)}`, max: 20, windowMs: 60_000 });
+  if (!rl.ok) {
+    return Response.json(
+      { error: "Aria is thinking hard — please wait a moment and try again." },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } },
+    );
+  }
 
   const invoice = await getInvoice(invoice_id);
   const thread = (await listConversations(invoice_id)).map((c) => ({
